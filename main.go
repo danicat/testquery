@@ -19,7 +19,7 @@ import (
 var ddl string
 
 func main() {
-	pkgDir := flag.String("pkg", "./...", "directory of the package to test")
+	pkgDir := flag.String("pkg", ".", "directory of the package to test")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -146,16 +146,16 @@ func populateTables(ctx context.Context, db *sql.DB, pkgDir string) error {
 		}
 	}
 
-	coverageResults, err := collectCoverageResults()
+	coverageResults, err := collectCoverageResults(pkgDir)
 	if err != nil {
 		return fmt.Errorf("failed to collect coverage results: %w", err)
 	}
 
 	for _, result := range coverageResults {
-		insert := `INSERT INTO all_coverage (package, file, from_line, from_col, to_line, to_col, stmt_num, count) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`
-		_, err := db.ExecContext(ctx, insert, result.Package, result.File, result.FromLine, result.FromColumn, result.ToLine, result.ToColumn, result.StatementNumber, result.Count)
+		insert := `INSERT INTO all_coverage (package, file, from_line, from_col, to_line, to_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
+		_, err := db.ExecContext(ctx, insert, result.Package, result.File, result.FromLine, result.FromColumn, result.ToLine, result.ToColumn, result.StatementNumber, result.Count, result.FunctionName)
 		if err != nil {
-			return fmt.Errorf("failed to insert test results: %w", err)
+			return fmt.Errorf("failed to insert coverage results: %w", err)
 		}
 	}
 
@@ -165,8 +165,8 @@ func populateTables(ctx context.Context, db *sql.DB, pkgDir string) error {
 	}
 
 	for _, result := range testCoverageResults {
-		insertSQL := `INSERT INTO test_coverage (test_name, package, file, from_line, from_col, to_line, to_col, stmt_num, count, function) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
-		_, err := db.Exec(insertSQL, result.TestName, result.Package, result.File, result.FromLine, result.FromColumn, result.ToLine, result.ToColumn, result.StatementNumber, result.Count, result.Function)
+		insertSQL := `INSERT INTO test_coverage (test_name, package, file, from_line, from_col, to_line, to_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+		_, err := db.Exec(insertSQL, result.TestName, result.Package, result.File, result.FromLine, result.FromColumn, result.ToLine, result.ToColumn, result.StatementNumber, result.Count, result.FunctionName)
 		if err != nil {
 			return err
 		}

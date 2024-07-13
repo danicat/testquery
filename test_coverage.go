@@ -22,7 +22,7 @@ type TestCoverageResult struct {
 	ToColumn        int    `json:"to_col"`
 	StatementNumber int    `json:"stmt_num"`
 	Count           int    `json:"count"`
-	Function        string `json:"function"`
+	FunctionName    string `json:"function_name"`
 }
 
 func collectTestCoverageResults(pkgDir string, testResults []TestEvent) ([]TestCoverageResult, error) {
@@ -56,7 +56,7 @@ func collectTestCoverageResults(pkgDir string, testResults []TestEvent) ([]TestC
 					ToColumn:        block.EndCol,
 					StatementNumber: block.NumStmt,
 					Count:           block.Count,
-					Function:        functionName,
+					FunctionName:    functionName,
 				})
 			}
 		}

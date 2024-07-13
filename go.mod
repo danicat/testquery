@@ -1,4 +1,4 @@
-module github.com/danicat/tq
+module github.com/danicat/testquery
 
 go 1.22.5
 

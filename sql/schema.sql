@@ -15,7 +15,8 @@
 		to_line INTEGER NOT NULL,
 		to_col INTEGER NOT NULL,
 		stmt_num INTEGER NOT NULL,
-		count INTEGER NOT NULL
+		count INTEGER NOT NULL,
+		function_name TEXT NOT NULL
 	);
 
     CREATE TABLE test_coverage (
@@ -28,5 +29,20 @@
 		to_col INTEGER NOT NULL,
 		stmt_num INTEGER NOT NULL,
 		count INTEGER NOT NULL,
-		function TEXT NOT NULL
+		function_name TEXT NULL
 	);
+
+create view failed_tests as
+select * 
+  from all_tests
+ where action = 'fail';
+
+create view passed_tests as 
+select * 
+  from all_tests
+ where action = 'pass';
+
+create view missing_coverage as
+select function_name, from_line, to_line
+  from all_coverage
+ where count = 0;
