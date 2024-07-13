@@ -10,10 +10,10 @@
     CREATE TABLE all_coverage (
 		package TEXT NOT NULL,
 		file TEXT NOT NULL,
-		from_line INTEGER NOT NULL,
-		from_col INTEGER NOT NULL,
-		to_line INTEGER NOT NULL,
-		to_col INTEGER NOT NULL,
+		start_line INTEGER NOT NULL,
+		start_col INTEGER NOT NULL,
+		end_line INTEGER NOT NULL,
+		end_col INTEGER NOT NULL,
 		stmt_num INTEGER NOT NULL,
 		count INTEGER NOT NULL,
 		function_name TEXT NOT NULL
@@ -23,26 +23,26 @@
 		test_name TEXT NOT NULL,
 		package TEXT NOT NULL,
 		file TEXT NOT NULL,
-		from_line INTEGER NOT NULL,
-		from_col INTEGER NOT NULL,
-		to_line INTEGER NOT NULL,
-		to_col INTEGER NOT NULL,
+		start_line INTEGER NOT NULL,
+		start_col INTEGER NOT NULL,
+		end_line INTEGER NOT NULL,
+		end_col INTEGER NOT NULL,
 		stmt_num INTEGER NOT NULL,
 		count INTEGER NOT NULL,
 		function_name TEXT NULL
 	);
 
 create view failed_tests as
-select * 
+select package, test
   from all_tests
  where action = 'fail';
 
 create view passed_tests as 
-select * 
+select package, test
   from all_tests
  where action = 'pass';
 
 create view missing_coverage as
-select function_name, from_line, to_line
+select package, function_name, file, start_line, start_col, end_line, end_col
   from all_coverage
  where count = 0;

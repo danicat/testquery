@@ -11,10 +11,10 @@ import (
 type CoverageResult struct {
 	Package         string `json:"package"`
 	File            string `json:"file"`
-	FromLine        int    `json:"from_line"`
-	FromColumn      int    `json:"from_col"`
-	ToLine          int    `json:"to_line"`
-	ToColumn        int    `json:"to_col"`
+	StartLine       int    `json:"start_line"`
+	StartColumn     int    `json:"start_col"`
+	EndLine         int    `json:"end_line"`
+	EndColumn       int    `json:"end_col"`
 	StatementNumber int    `json:"stmt_num"`
 	Count           int    `json:"count"`
 	FunctionName    string `json:"function_name"`
@@ -39,10 +39,10 @@ func collectCoverageResults(pkgDir string) ([]CoverageResult, error) {
 			results = append(results, CoverageResult{
 				Package:         packageName,
 				File:            fileName,
-				FromLine:        block.StartLine,
-				FromColumn:      block.StartCol,
-				ToLine:          block.EndLine,
-				ToColumn:        block.EndCol,
+				StartLine:       block.StartLine,
+				StartColumn:     block.StartCol,
+				EndLine:         block.EndLine,
+				EndColumn:       block.EndCol,
 				StatementNumber: block.NumStmt,
 				Count:           block.Count,
 				FunctionName:    functionName,

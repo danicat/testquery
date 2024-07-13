@@ -4,15 +4,18 @@ import (
 	"bufio"
 	"context"
 	"database/sql"
-	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
 	_ "embed"
 
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 //go:embed sql/schema.sql
@@ -63,44 +66,30 @@ func executeQuery(db *sql.DB, query string) error {
 		log.Fatal(err)
 	}
 
-	// Create a slice of interfaces to represent each column and a slice of pointers to each item in the interface slice
-	values := make([]interface{}, len(columns))
-	valuePtrs := make([]interface{}, len(columns))
-	for i := range values {
-		valuePtrs[i] = &values[i]
-	}
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
 
-	// Iterate through the result set
-	var results []map[string]interface{}
+	var header = make(table.Row, len(columns))
+	for i := range columns {
+		header[i] = columns[i]
+	}
+	t.AppendHeader(header)
+
 	for rows.Next() {
-		// Scan the result into the value pointers
-		if err := rows.Scan(valuePtrs...); err != nil {
-			log.Fatal(err)
+		var values = make(table.Row, len(columns))
+		var valuesPtr = make([]any, len(columns))
+		for i := range values {
+			valuesPtr[i] = &values[i]
 		}
 
-		// Create a map to store the row data
-		rowMap := make(map[string]interface{})
-		for i, col := range columns {
-			var v interface{}
-			val := values[i]
-			b, ok := val.([]byte)
-			if ok {
-				v = string(b)
-			} else {
-				v = val
-			}
-			rowMap[col] = v
+		if err := rows.Scan(valuesPtr...); err != nil {
+			return fmt.Errorf("failed to read row: %w", err)
 		}
-		results = append(results, rowMap)
+
+		t.AppendRow(values)
 	}
 
-	// Print the results as JSON
-	jsonResults, err := json.MarshalIndent(results, "", "  ")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(jsonResults))
-
+	t.Render()
 	return nil
 }
 
@@ -116,13 +105,15 @@ func prompt(ctx context.Context, db *sql.DB) error {
 
 		fmt.Print("\n> ")
 		text, err := reader.ReadString('\n')
-		if err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		} else if err != nil {
 			return fmt.Errorf("failed to read input: %w", err)
 		}
 
 		err = executeQuery(db, text)
 		if err != nil {
-			log.Println(err)
+			fmt.Println("ERROR: ", err)
 		}
 	}
 }
@@ -152,8 +143,8 @@ func populateTables(ctx context.Context, db *sql.DB, pkgDir string) error {
 	}
 
 	for _, result := range coverageResults {
-		insert := `INSERT INTO all_coverage (package, file, from_line, from_col, to_line, to_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
-		_, err := db.ExecContext(ctx, insert, result.Package, result.File, result.FromLine, result.FromColumn, result.ToLine, result.ToColumn, result.StatementNumber, result.Count, result.FunctionName)
+		insert := `INSERT INTO all_coverage (package, file, start_line, start_col, end_line, end_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
+		_, err := db.ExecContext(ctx, insert, result.Package, result.File, result.StartLine, result.StartColumn, result.EndLine, result.EndColumn, result.StatementNumber, result.Count, result.FunctionName)
 		if err != nil {
 			return fmt.Errorf("failed to insert coverage results: %w", err)
 		}
@@ -165,8 +156,8 @@ func populateTables(ctx context.Context, db *sql.DB, pkgDir string) error {
 	}
 
 	for _, result := range testCoverageResults {
-		insertSQL := `INSERT INTO test_coverage (test_name, package, file, from_line, from_col, to_line, to_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
-		_, err := db.Exec(insertSQL, result.TestName, result.Package, result.File, result.FromLine, result.FromColumn, result.ToLine, result.ToColumn, result.StatementNumber, result.Count, result.FunctionName)
+		insertSQL := `INSERT INTO test_coverage (test_name, package, file, start_line, start_col, end_line, end_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+		_, err := db.Exec(insertSQL, result.TestName, result.Package, result.File, result.StartLine, result.StartColumn, result.EndLine, result.EndColumn, result.StatementNumber, result.Count, result.FunctionName)
 		if err != nil {
 			return err
 		}
