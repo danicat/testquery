@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"database/sql"
 	"errors"
@@ -10,9 +9,11 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/chzyer/readline"
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
@@ -21,13 +22,24 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
-	err := run(ctx, *pkgDir)
+
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:                 "> ",
+		HistoryFile:            "/tmp/readline-multiline",
+		DisableAutoSaveHistory: true,
+	})
 	if err != nil {
+		log.Fatalln(err)
+	}
+	defer rl.Close()
+
+	err = run(ctx, *pkgDir, rl)
+	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, context.Canceled) {
 		log.Fatalln(err)
 	}
 }
 
-func run(ctx context.Context, pkgDir string) error {
+func run(ctx context.Context, pkgDir string, rl *readline.Instance) error {
 	// Initialize the in-memory SQLite database
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
@@ -45,7 +57,7 @@ func run(ctx context.Context, pkgDir string) error {
 		return fmt.Errorf("failed to populate tables: %w", err)
 	}
 
-	return prompt(ctx, db)
+	return prompt(ctx, db, rl)
 }
 
 func executeQuery(db *sql.DB, query string) error {
@@ -88,9 +100,8 @@ func executeQuery(db *sql.DB, query string) error {
 	return nil
 }
 
-func prompt(ctx context.Context, db *sql.DB) error {
-	reader := bufio.NewReader(os.Stdin)
-
+func prompt(ctx context.Context, db *sql.DB, rl *readline.Instance) error {
+	var cmds []string
 	for {
 		select {
 		case <-ctx.Done():
@@ -98,16 +109,28 @@ func prompt(ctx context.Context, db *sql.DB) error {
 		default:
 		}
 
-		fmt.Print("\n> ")
-		text, err := reader.ReadString('\n')
-		if errors.Is(err, io.EOF) {
-			fmt.Println()
-			return nil
-		} else if err != nil {
-			return fmt.Errorf("failed to read input: %w", err)
+		line, err := rl.Readline()
+		if err != nil {
+			return fmt.Errorf("failed to read line: %w", err)
 		}
 
-		err = executeQuery(db, text)
+		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+
+		cmds = append(cmds, line)
+		if !strings.HasSuffix(line, ";") {
+			rl.SetPrompt(">>> ")
+			continue
+		}
+
+		cmd := strings.Join(cmds, " ")
+		cmds = cmds[:0]
+		rl.SetPrompt("> ")
+		rl.SaveHistory(cmd)
+
+		err = executeQuery(db, cmd)
 		if err != nil {
 			fmt.Println("ERROR: ", err)
 		}

@@ -3,6 +3,7 @@ module github.com/danicat/testquery
 go 1.22.5
 
 require (
+	github.com/chzyer/readline v1.5.1
 	github.com/jedib0t/go-pretty/v6 v6.5.9
 	github.com/mattn/go-sqlite3 v1.14.22
 	golang.org/x/tools v0.23.0
