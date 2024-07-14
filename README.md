@@ -2,6 +2,10 @@
 
 Test Query (tq) is a command line tool to query Go test results with a SQL interface. The idea of using SQL was inspired by a similar tool called OSQuery, which does the same for operating system metrics.
 
+## Demo
+
+<video src="demo01.mp4" width="320" height="240" controls></video>
+
 ## History
 
 During Gophercon 2024, specially after my talk on mutation testing, many people came to me to talk about their challenges with testing. One particular thought that stuck with me was that in older codebases it can become hard to keep track of the need for each individual test, and we can potentually end up with dozens - maybe even hundreds - of tests that are obsolete.
