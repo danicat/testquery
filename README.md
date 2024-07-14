@@ -4,7 +4,7 @@ Test Query (tq) is a command line tool to query Go test results with a SQL inter
 
 ## Demo
 
-<video src="demo01.mp4" width="320" height="240" controls></video>
+https://github.com/user-attachments/assets/b6ed5637-392c-4686-9405-fd174e559582
 
 ## History
 
