@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -84,4 +86,21 @@ func getFunctionName(fileName string, lineNumber int) (string, error) {
 	}
 
 	return "", nil
+}
+
+func populateTestCoverageResults(ctx context.Context, db *sql.DB, pkgDir string, testResults []TestEvent) error {
+	testCoverageResults, err := collectTestCoverageResults(pkgDir, testResults)
+	if err != nil {
+		return fmt.Errorf("failed to collect coverage results by test: %w", err)
+	}
+
+	for _, result := range testCoverageResults {
+		insertSQL := `INSERT INTO test_coverage (test_name, package, file, start_line, start_col, end_line, end_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+		_, err := db.ExecContext(ctx, insertSQL, result.TestName, result.Package, result.File, result.StartLine, result.StartColumn, result.EndLine, result.EndColumn, result.StatementNumber, result.Count, result.FunctionName)
+		if err != nil {
+			return fmt.Errorf("failed to insert test coverage results: %w", err)
+		}
+	}
+
+	return nil
 }

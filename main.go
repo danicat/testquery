@@ -11,15 +11,10 @@ import (
 	"log"
 	"os"
 
-	_ "embed"
-
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
-
-//go:embed sql/schema.sql
-var ddl string
 
 func main() {
 	pkgDir := flag.String("pkg", ".", "directory of the package to test")
@@ -63,7 +58,7 @@ func executeQuery(db *sql.DB, query string) error {
 	// Get column names
 	columns, err := rows.Columns()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to retrieve column names: %w", err)
 	}
 
 	t := table.NewWriter()
@@ -116,52 +111,4 @@ func prompt(ctx context.Context, db *sql.DB) error {
 			fmt.Println("ERROR: ", err)
 		}
 	}
-}
-
-func createTables(ctx context.Context, db *sql.DB) error {
-	_, err := db.ExecContext(ctx, ddl)
-	return err
-}
-
-func populateTables(ctx context.Context, db *sql.DB, pkgDir string) error {
-	testResults, err := collectTestResults(pkgDir)
-	if err != nil {
-		return fmt.Errorf("failed to collect test results: %w", err)
-	}
-
-	for _, test := range testResults {
-		insert := "INSERT INTO all_tests (\"time\", \"action\", package, test, elapsed, \"output\") VALUES (?, ?, ?, ?, ?, ?);"
-		_, err = db.ExecContext(ctx, insert, test.Time, test.Action, test.Package, test.Test, test.Elapsed, test.Output)
-		if err != nil {
-			return fmt.Errorf("failed to insert test results: %w", err)
-		}
-	}
-
-	coverageResults, err := collectCoverageResults(pkgDir)
-	if err != nil {
-		return fmt.Errorf("failed to collect coverage results: %w", err)
-	}
-
-	for _, result := range coverageResults {
-		insert := `INSERT INTO all_coverage (package, file, start_line, start_col, end_line, end_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
-		_, err := db.ExecContext(ctx, insert, result.Package, result.File, result.StartLine, result.StartColumn, result.EndLine, result.EndColumn, result.StatementNumber, result.Count, result.FunctionName)
-		if err != nil {
-			return fmt.Errorf("failed to insert coverage results: %w", err)
-		}
-	}
-
-	testCoverageResults, err := collectTestCoverageResults(pkgDir, testResults)
-	if err != nil {
-		return fmt.Errorf("failed to collect coverage results by test: %w", err)
-	}
-
-	for _, result := range testCoverageResults {
-		insertSQL := `INSERT INTO test_coverage (test_name, package, file, start_line, start_col, end_line, end_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
-		_, err := db.Exec(insertSQL, result.TestName, result.Package, result.File, result.StartLine, result.StartColumn, result.EndLine, result.EndColumn, result.StatementNumber, result.Count, result.FunctionName)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"path/filepath"
 
@@ -51,4 +53,20 @@ func collectCoverageResults(pkgDir string) ([]CoverageResult, error) {
 	}
 
 	return results, nil
+}
+
+func populateCoverageResults(ctx context.Context, db *sql.DB, pkgDir string) error {
+	coverageResults, err := collectCoverageResults(pkgDir)
+	if err != nil {
+		return fmt.Errorf("failed to collect coverage results: %w", err)
+	}
+
+	for _, result := range coverageResults {
+		insertSQL := `INSERT INTO all_coverage (package, file, start_line, start_col, end_line, end_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
+		_, err := db.ExecContext(ctx, insertSQL, result.Package, result.File, result.StartLine, result.StartColumn, result.EndLine, result.EndColumn, result.StatementNumber, result.Count, result.FunctionName)
+		if err != nil {
+			return fmt.Errorf("failed to insert coverage results: %w", err)
+		}
+	}
+	return nil
 }

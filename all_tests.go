@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -45,4 +47,21 @@ func parseTestOutput(output []byte) ([]TestEvent, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func populateTestResults(ctx context.Context, db *sql.DB, pkgDir string) ([]TestEvent, error) {
+	testResults, err := collectTestResults(pkgDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect test results: %w", err)
+	}
+
+	for _, test := range testResults {
+		insertSQL := "INSERT INTO all_tests (\"time\", \"action\", package, test, elapsed, \"output\") VALUES (?, ?, ?, ?, ?, ?);"
+		_, err = db.ExecContext(ctx, insertSQL, test.Time, test.Action, test.Package, test.Test, test.Elapsed, test.Output)
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert test results: %w", err)
+		}
+	}
+
+	return testResults, nil
 }
