@@ -101,6 +101,7 @@ func prompt(ctx context.Context, db *sql.DB) error {
 		fmt.Print("\n> ")
 		text, err := reader.ReadString('\n')
 		if errors.Is(err, io.EOF) {
+			fmt.Println()
 			return nil
 		} else if err != nil {
 			return fmt.Errorf("failed to read input: %w", err)

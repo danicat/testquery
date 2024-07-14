@@ -32,5 +32,10 @@ func populateTables(ctx context.Context, db *sql.DB, pkgDir string) error {
 		return fmt.Errorf("failed to populate coverage results: %w", err)
 	}
 
+	err = populateCode(ctx, db, pkgDir)
+	if err != nil {
+		return fmt.Errorf("failed to populate code: %w", err)
+	}
+
 	return nil
 }

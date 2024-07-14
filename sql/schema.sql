@@ -32,6 +32,13 @@
 		function_name TEXT NULL
 	);
 
+	CREATE TABLE all_code (
+		package TEXT NOT NULL,
+		file TEXT NOT NULL,
+		line_number INTEGER NOT NULL,
+		content TEXT NOT NULL
+	);
+
 create view failed_tests as
 select package, test
   from all_tests
