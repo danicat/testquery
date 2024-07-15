@@ -20,7 +20,45 @@ It is currently under development so it doesn't support a lot of information yet
 
 ## Usage
 
-Disclaimer: this tool is currently a prototype that has been through no more than 48 hours of active development, so use it at your own risk. Ironically, I haven't written any tests for it `:)`
+```sh
+% tq --help
+Usage of tq:
+  -dbfile string
+    	database file name for use with --persist and --open (default "testquery.db")
+  -open
+    	open a database from a previous run
+  -persist
+    	persist database between runs
+  -pkg string
+    	directory of the package to test (default ".")
+  -query string
+    	runs a single query and returns the result
+
+```
+By default tq will launch in iterative mode unless you pass a `--query` flag:
+
+```sh
+% tq --persist --open --query "select * from code_coverage where file = 'div.go'"
++--------+-------------+-----------------------------------------------------------+---------+
+| FILE   | LINE_NUMBER | CONTENT                                                   | COVERED |
++--------+-------------+-----------------------------------------------------------+---------+
+| div.go |           1 | package testdata                                          |       0 |
+| div.go |           2 |                                                           |       0 |
+| div.go |           3 | import "errors"                                           |       0 |
+| div.go |           4 |                                                           |       0 |
+| div.go |           5 | var ErrDivideByZero = errors.New("cannot divide by zero") |       0 |
+| div.go |           6 |                                                           |       0 |
+| div.go |           7 | func divide(dividend, divisor int) (int, error) {         |       1 |
+| div.go |           8 |     if divisor == 0 {                                     |       1 |
+| div.go |           9 |         return 0, ErrDivideByZero                         |       1 |
+| div.go |          10 |     }                                                     |       1 |
+| div.go |          11 |                                                           |       0 |
+| div.go |          12 |     return dividend / divisor, nil                        |       1 |
+| div.go |          13 | }                                                         |       0 |
+| div.go |          14 |                                                           |       0 |
++--------+-------------+-----------------------------------------------------------+---------+
+```
+
 
 To use it, compile the code with `make build` (or `go build` if you are being wild) and run `tq` from the command line. By default `tq` will run data collection on the current directory but you can pass a package to it by using the `--pkg` flag.
 

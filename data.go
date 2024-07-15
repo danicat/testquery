@@ -39,3 +39,12 @@ func populateTables(ctx context.Context, db *sql.DB, pkgDir string) error {
 
 	return nil
 }
+
+func persistDatabase(db *sql.DB, dbFile string) error {
+	_, err := db.Exec("VACUUM INTO ?", dbFile)
+	if err != nil {
+		return fmt.Errorf("failed to save database file: %w", err)
+	}
+
+	return nil
+}

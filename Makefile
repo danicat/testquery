@@ -1,6 +1,6 @@
 .PHONY: build
 build:
-	go build -o bin/tq
+	go build -o bin/tq -ldflags="-X 'main.Version=v0.1'"
 
 .PHONY: test
 test: build

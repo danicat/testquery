@@ -53,3 +53,6 @@ create view missing_coverage as
 select package, function_name, file, start_line, start_col, end_line, end_col
   from all_coverage
  where count = 0;
+
+ create view code_coverage as
+ select distinct ac.file, line_number, content, ifnull(count, 0) covered from all_code ac left join all_coverage cov on ac.file = cov.file and ac.line_number between cov.start_line and cov.end_line where ac.file not like '%_test.go';
