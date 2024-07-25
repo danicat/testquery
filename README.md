@@ -20,6 +20,8 @@ It is currently under development so it doesn't support a lot of information yet
 
 ## Usage
 
+To use it, compile the code with `make build` (or `go build` if you are being wild) and run `tq` from the command line. By default `tq` will run data collection on the current directory but you can pass a package to it by using the `--pkg` flag.
+
 ```sh
 % tq --help
 Usage of tq:
@@ -60,7 +62,6 @@ By default tq will launch in iterative mode unless you pass a `--query` flag:
 ```
 
 
-To use it, compile the code with `make build` (or `go build` if you are being wild) and run `tq` from the command line. By default `tq` will run data collection on the current directory but you can pass a package to it by using the `--pkg` flag.
 
 To run the examples (in `sql/queriesl.sql`), clone this project and run the following command:
 
