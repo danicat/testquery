@@ -39,7 +39,7 @@ Usage of tq:
 ```
 By default tq will launch in iterative mode unless you pass a `--query` flag:
 
-```sh
+```
 % tq --persist --open --query "select * from code_coverage where file = 'div.go'"
 +--------+-------------+-----------------------------------------------------------+---------+
 | FILE   | LINE_NUMBER | CONTENT                                                   | COVERED |
