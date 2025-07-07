@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// execCommand is a variable to enable mocking of exec.Command for tests
+var execCommand = exec.Command // Uses the imported "os/exec" package
+
 // TestResult represents the structure of a test result
 type TestEvent struct {
 	Time    time.Time `json:"time"`
@@ -21,32 +24,33 @@ type TestEvent struct {
 }
 
 // collectTestResults runs `go test -json` and parses the output
-func collectTestResults(pkgDir string) ([]TestEvent, error) {
-	cmd := exec.Command("go", "test", pkgDir, "-json", "-coverprofile=coverage.out")
-	output, _ := cmd.Output()
-	tests, err := parseTestOutput(output)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse test output: %w", err)
+var collectTestResults = func(pkgDir string) ([]TestEvent, error) {
+	cmd := execCommand("go", "test", pkgDir, "-json", "-coverprofile=coverage.out")
+	output, err := cmd.Output()
+	// Ignore exit errors, as go test returns non-zero on test failures
+	if err != nil && !strings.Contains(err.Error(), "exit status") {
+		return nil, fmt.Errorf("failed to execute go test command: %w", err)
 	}
-
-	var results []TestEvent
-	for _, test := range tests {
-		if test.Test == "" || (test.Action != "pass" && test.Action != "fail") {
-			continue
-		}
-		results = append(results, test)
-	}
-	return results, nil
+	return parseTestOutput(output)
 }
 
 func parseTestOutput(output []byte) ([]TestEvent, error) {
-	var result []TestEvent
-	list := "[" + strings.ReplaceAll(string(output[:len(output)-1]), "\n", ",") + "]"
-	err := json.Unmarshal([]byte(list), &result)
-	if err != nil {
-		return nil, err
+	var events []TestEvent
+	decoder := json.NewDecoder(strings.NewReader(string(output)))
+	for {
+		var event TestEvent
+		if err := decoder.Decode(&event); err != nil {
+			if err.Error() == "EOF" { // Correctly check for EOF
+				break
+			}
+			return nil, fmt.Errorf("failed to decode test event: %w", err)
+		}
+		// Filter for relevant events (actual test results)
+		if event.Test != "" && (event.Action == "pass" || event.Action == "fail" || event.Action == "skip") {
+			events = append(events, event)
+		}
 	}
-	return result, nil
+	return events, nil
 }
 
 func populateTestResults(ctx context.Context, db *sql.DB, pkgDir string) ([]TestEvent, error) {

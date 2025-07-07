@@ -17,7 +17,7 @@ type CodeLine struct {
 }
 
 // collectCodeLines collects all lines of code from Go files
-func collectCodeLines(pkgDir string) ([]CodeLine, error) {
+var collectCodeLines = func(pkgDir string) ([]CodeLine, error) {
 	var results []CodeLine
 
 	err := filepath.Walk(pkgDir, func(path string, info os.FileInfo, err error) error {
