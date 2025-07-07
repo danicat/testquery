@@ -4,9 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os/exec"
 	"path/filepath"
 
@@ -27,7 +24,7 @@ type TestCoverageResult struct {
 	FunctionName    string `json:"function_name"`
 }
 
-func collectTestCoverageResults(pkgDir string, testResults []TestEvent) ([]TestCoverageResult, error) {
+var collectTestCoverageResults = func(pkgDir string, testResults []TestEvent) ([]TestCoverageResult, error) {
 	var results []TestCoverageResult
 
 	for _, test := range testResults {
@@ -65,27 +62,6 @@ func collectTestCoverageResults(pkgDir string, testResults []TestEvent) ([]TestC
 	}
 
 	return results, nil
-}
-
-// getFunctionName returns the name of the function at the given line number
-func getFunctionName(fileName string, lineNumber int) (string, error) {
-	fs := token.NewFileSet()
-	node, err := parser.ParseFile(fs, fileName, nil, 0)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse file: %w", err)
-	}
-
-	for _, decl := range node.Decls {
-		if funcDecl, ok := decl.(*ast.FuncDecl); ok {
-			start := fs.Position(funcDecl.Pos()).Line
-			end := fs.Position(funcDecl.End()).Line
-			if start <= lineNumber && lineNumber <= end {
-				return funcDecl.Name.Name, nil
-			}
-		}
-	}
-
-	return "", nil
 }
 
 func populateTestCoverageResults(ctx context.Context, db *sql.DB, pkgDir string, testResults []TestEvent) error {

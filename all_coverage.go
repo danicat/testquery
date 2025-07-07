@@ -22,7 +22,7 @@ type CoverageResult struct {
 	FunctionName    string `json:"function_name"`
 }
 
-func collectCoverageResults(pkgDir string) ([]CoverageResult, error) {
+var collectCoverageResults = func(pkgDir string) ([]CoverageResult, error) {
 	profiles, err := cover.ParseProfiles("coverage.out")
 	if err != nil {
 		return nil, err

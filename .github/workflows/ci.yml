@@ -1,0 +1,43 @@
+name: Go CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20' # Specify a Go version compatible with the project
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Build
+      run: make build # Assumes Makefile has a build target
+
+    - name: Test
+      run: make test # Assumes Makefile has a test target that runs all tests (unit & integration)
+
+    # Optional: Upload coverage reports if generated
+    # - name: Upload coverage to Codecov
+    #   uses: codecov/codecov-action@v3
+    #   with:
+    #     token: ${{ secrets.CODECOV_TOKEN }} # If using Codecov and it's private
+    #     files: ./coverage.out # Path to coverage file
+    #     fail_ci_if_error: true
+    #     verbose: true
+      env:
+        GO111MODULE: on
