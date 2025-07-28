@@ -25,7 +25,7 @@ type CoverageResult struct {
 func collectCoverageResults(pkgDir string) ([]CoverageResult, error) {
 	profiles, err := cover.ParseProfiles("coverage.out")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse coverage profiles: %w", err)
 	}
 
 	var results []CoverageResult
