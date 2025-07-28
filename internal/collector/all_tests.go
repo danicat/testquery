@@ -1,13 +1,14 @@
-package main
+package collector
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
-	"strings"
 	"time"
 )
 
@@ -23,24 +24,33 @@ type TestEvent struct {
 }
 
 // collectTestResults runs `go test -json` and parses the output
-func collectTestResults(pkgDir string) ([]TestEvent, error) {
-	cmd := exec.Command("go", "test", pkgDir, "-json", "-coverprofile=coverage.out")
-	output, err := cmd.CombinedOutput()
+func collectTestResults(pkgDirs []string) ([]TestEvent, error) {
+	args := []string{"test"}
+	args = append(args, pkgDirs...)
+	args = append(args, "-json", "-coverprofile=coverage.out")
+
+	cmd := exec.Command("go", args...)
+	cmd.Dir = "." // Run from project root
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
 			// This is an error running the command, not a test failure.
-			return nil, fmt.Errorf("failed to run go test: %w: %s", err, string(output))
+			return nil, fmt.Errorf("failed to run go test: %w: %s", err, stderr.String())
 		}
 	}
 
-	tests, err := parseTestOutput(output)
+	tests, err := parseTestOutput(stdout.Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse test output: %w. Output: %s", err, string(output))
+		return nil, fmt.Errorf("failed to parse test output: %w. Output: %s", err, stderr.String())
 	}
 
 	// Check for a build failure event, which indicates the package could not be tested.
 	for _, event := range tests {
-		if event.Action == "fail" && event.FailedBuild != nil {
+		if event.Action == "fail" && event.FailedBuild != nil && *event.FailedBuild != "" {
 			return nil, fmt.Errorf("build failed for package %s", *event.FailedBuild)
 		}
 	}
@@ -57,7 +67,7 @@ func collectTestResults(pkgDir string) ([]TestEvent, error) {
 
 func parseTestOutput(output []byte) ([]TestEvent, error) {
 	var result []TestEvent
-	decoder := json.NewDecoder(strings.NewReader(string(output)))
+	decoder := json.NewDecoder(bytes.NewReader(output))
 	for {
 		var event TestEvent
 		if err := decoder.Decode(&event); err == io.EOF {
@@ -70,13 +80,15 @@ func parseTestOutput(output []byte) ([]TestEvent, error) {
 	return result, nil
 }
 
-func populateTestResults(ctx context.Context, db *sql.DB, pkgDir string) ([]TestEvent, error) {
-	testResults, err := collectTestResults(pkgDir)
+func PopulateTestResults(ctx context.Context, db *sql.DB, pkgDirs []string) ([]TestEvent, error) {
+	testResults, err := collectTestResults(pkgDirs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect test results: %w", err)
 	}
+	_ = os.WriteFile("test_results_count.txt", []byte(fmt.Sprintf("%d", len(testResults))), 0644)
 
 	for _, test := range testResults {
+
 		insertSQL := "INSERT INTO all_tests (\"time\", \"action\", package, test, elapsed, \"output\") VALUES (?, ?, ?, ?, ?, ?);"
 		_, err = db.ExecContext(ctx, insertSQL, test.Time, test.Action, test.Package, test.Test, test.Elapsed, test.Output)
 		if err != nil {
@@ -86,3 +98,4 @@ func populateTestResults(ctx context.Context, db *sql.DB, pkgDir string) ([]Test
 
 	return testResults, nil
 }
+

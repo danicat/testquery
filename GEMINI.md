@@ -47,35 +47,35 @@ To run `tq` on the provided `testdata` sample, you can use the following command
 
 ## How to Use
 
-You can run `tq` in two modes: interactive mode or single-query mode.
+You can run `tq` in two modes: interactive shell mode or single-query mode.
 
-### Interactive Mode
+The tool works by creating a database file (by default, `testquery.db`) with the test data. If the database file does not exist when you run a command, `tq` will automatically run the data collection process first.
 
-To start `tq` in interactive mode, simply run the executable without the `--query` flag.
+### Interactive Mode (`shell`)
 
-```bash
-./tq
-```
-
-This will start an interactive prompt where you can type SQL queries.
-
-```
-> SELECT * FROM all_tests;
-```
-
-### Single-Query Mode
-
-To run a single query and exit, use the `--query` flag.
+To start `tq` in interactive mode, use the `shell` command. This will start an interactive prompt where you can type SQL queries.
 
 ```bash
-./tq --query "SELECT * FROM all_tests WHERE action = 'fail';"
+./tq shell --pkg ./testdata/
+```
+
+This will produce a `testquery.db` file. On subsequent runs, the tool will use the existing file. If you want to force a new data collection, use the `--force` flag:
+
+```bash
+./tq shell --pkg ./testdata/ --force
+```
+
+### Single-Query Mode (`query`)
+
+To run a single query and exit, use the `query` command.
+
+```bash
+./tq query --pkg ./testdata/ "SELECT * FROM all_tests WHERE action = 'fail';"
 ```
 
 ### Command-Line Flags
 
-*   `--pkg <directory>`: Specifies the directory of the package to test. Defaults to the current directory (`.`).
-*   `--persist`: Persists the database to a file between runs.
-*   `--dbfile <filename>`: Specifies the name of the database file to use with `--persist` and `--open`. Defaults to `testquery.db`.
-*   `--open`: Opens a database from a previous run.
-*   `--query <query>`: Runs a single query and returns the result.
+*   `--pkg <directory>`: Specifies the directory of the package to test. Defaults to `./...`.
+*   `--db <filename>`: Specifies the name of the database file. Defaults to `testquery.db`.
+*   `--force`: Forces the recreation of the database, even if it already exists.
 *   `--version`: Shows the version information.

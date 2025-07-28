@@ -10,10 +10,10 @@ This document contains a prioritized list of improvements for the TestQuery (`tq
 
 | Priority | Improvement | Business Value | Technical Certainty | Rationale |
 | :--- | :--- | :--- | :--- | :--- |
-| **1** | **Insufficient Error Handling** | **High** | **High** | Silent failures are critical bugs that undermine the tool's reliability. Fixing this is essential for user trust. The implementation is straightforward. |
-| **2** | **Ambiguous CLI** | **High** | **High** | The current CLI is confusing. Moving to a subcommand structure (`collect`, `query`, `shell`) makes the tool vastly more intuitive and scalable. This is a standard task with libraries like `cobra`. |
+| **1** | **Insufficient Error Handling** | **High** | **High** | **Addressed.** The tool now correctly handles test failures, allowing the process to continue and populate the database with valid pass/fail results. |
+| **2** | **Ambiguous CLI** | **High** | **High** | **Completed.** The CLI has been redesigned to use an implicit-collection model with `query` and `shell` commands, which is more intuitive than the original subcommand proposal. |
 | **3** | **No Internal Test Suite** | **High** | **High** | We cannot safely refactor or add features without a test suite to prevent regressions. This is a foundational requirement for a healthy project. |
-| **4** | **Monolithic `main` Package** | **Medium** | **High** | Refactoring into a modular structure is crucial for long-term maintainability and will make implementing all other features easier and cleaner. |
+| **4** | **Monolithic `main` Package** | **Medium** | **High** | **Completed.** The codebase has been refactored into a modular structure with `cmd/` and `internal/` directories. |
 | **5** | **Inflexible Output Formats** | **Medium** | **High** | Adding JSON/CSV output makes `tq` usable in scripts and CI/CD pipelines, significantly expanding its utility beyond interactive use. |
 | **6** | **No Versioning Strategy** | **Medium** | **High** | A proper versioning strategy is a hallmark of a professional project, enabling clear communication about releases and changes. Implementation via linker flags is simple. |
 | **7** | **Incomplete `LICENSE` File** | **Medium** | **High** | An empty `LICENSE` file creates legal ambiguity. Adding a standard open-source license is a simple but critical step for community adoption. |
@@ -51,3 +51,21 @@ This document contains a prioritized list of improvements for the TestQuery (`tq
 | Item | Improvement | Business Value | Technical Certainty | Rationale |
 | :--- | :--- | :--- | :--- | :--- |
 | **F** | **Limited Database Schema** | **Low** | **High** | Expanding the schema for more metrics is a feature enhancement, but the core value is already provided. This can be revisited if users request it. |
+
+
+---
+## Backlog
+
+*This is the final, ordered backlog based on the prioritization matrix. Work should be pulled from the top of this list.*
+
+1.  **[P3] Create Internal Test Suite:** Build a test suite to verify the correctness of the tool's logic.
+2.  **[P5] Add JSON/CSV Output Formats:** Implement a `--output-format` flag.
+3.  **[P6] Implement Versioning Strategy:** Use Git tags and linker flags to set the version.
+4.  **[P7] Add a `LICENSE` File:** Choose and add an open-source license.
+5.  **[P8] Enhance CI/CD Pipeline:** Add linting and static analysis.
+6.  **[Spike-A] Explore Efficient Coverage Analysis:** Research parsing `coverage.out` for per-test data.
+7.  **[Spike-B] Explore Robust Function Name Retrieval:** Research the `go/analysis` framework.
+8.  **[Spike-C] Explore Advanced Interactive Prompt:** Research readline libraries for autocompletion.
+9.  **[Feature-D] Add Support for Build Tags:** Implement a `--tags` flag.
+10. **[Feature-E] Add Configuration File Support:** Implement `.tq.yaml` support.
+11. **[Feature-F] Expand Database Schema:** Add more metrics to the database.

@@ -24,3 +24,4 @@ go.work.sum
 # Local binaries folder
 bin/
 testdata/bin/
+test.db

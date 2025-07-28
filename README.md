@@ -20,51 +20,61 @@ It is currently under development so it doesn't support a lot of information yet
 
 ## Usage
 
-To use it, compile the code with `make build` (or `go build` if you are being wild) and run `tq` from the command line. By default `tq` will run data collection on the current directory but you can pass a package to it by using the `--pkg` flag.
+To use `tq`, compile the code with `make build` (or `go build`) and run the binary from the command line.
+
+`tq` works by implicitly creating a database file (by default, `testquery.db`) if one does not exist. It runs `go test` on the package you specify (or `./...` by default) and collects all the data into the database. If a database file already exists, `tq` will use it.
+
+### Commands
+
+There are two main commands: `query` and `shell`.
+
+#### `tq query`
+
+Executes a single, non-interactive query against the database.
 
 ```sh
-% tq --help
-Usage of tq:
-  -dbfile string
-    	database file name for use with --persist and --open (default "testquery.db")
-  -open
-    	open a database from a previous run
-  -persist
-    	persist database between runs
-  -pkg string
-    	directory of the package to test (default ".")
-  -query string
-    	runs a single query and returns the result
+# Run a query against the testdata package
+# This will create testquery.db if it doesn't exist
+./bin/tq query --pkg ./testdata/ "SELECT * FROM failed_tests"
 
-```
-By default tq will launch in iterative mode unless you pass a `--query` flag:
-
-```
-% tq --persist --open --query "select * from code_coverage where file = 'div.go'"
-+--------+-------------+-----------------------------------------------------------+---------+
-| FILE   | LINE_NUMBER | CONTENT                                                   | COVERED |
-+--------+-------------+-----------------------------------------------------------+---------+
-| div.go |           1 | package testdata                                          |       0 |
-| div.go |           2 |                                                           |       0 |
-| div.go |           3 | import "errors"                                           |       0 |
-| div.go |           4 |                                                           |       0 |
-| div.go |           5 | var ErrDivideByZero = errors.New("cannot divide by zero") |       0 |
-| div.go |           6 |                                                           |       0 |
-| div.go |           7 | func divide(dividend, divisor int) (int, error) {         |       1 |
-| div.go |           8 |     if divisor == 0 {                                     |       1 |
-| div.go |           9 |         return 0, ErrDivideByZero                         |       1 |
-| div.go |          10 |     }                                                     |       1 |
-| div.go |          11 |                                                           |       0 |
-| div.go |          12 |     return dividend / divisor, nil                        |       1 |
-| div.go |          13 | }                                                         |       0 |
-| div.go |          14 |                                                           |       0 |
-+--------+-------------+-----------------------------------------------------------+---------+
+# Force the database to be recreated, even if it exists
+./bin/tq query --pkg ./testdata/ --force "SELECT * FROM failed_tests"
 ```
 
+#### `tq shell`
 
-
-To run the examples (in `sql/queriesl.sql`), clone this project and run the following command:
+Starts an interactive SQL shell for querying the database.
 
 ```sh
-$ bin/tq --pkg ./testdata/
+# Start a shell for the testdata package
+# This will create testquery.db if it doesn't exist
+./bin/tq shell --pkg ./testdata/
+
+# Force the database to be recreated
+./bin/tq shell --pkg ./testdata/ --force
+```
+
+### Command-Line Help
+
+You can get more information about the available commands and flags by using the `--help` flag.
+
+```sh
+% ./bin/tq --help
+TestQuery (tq) is a command-line tool that allows you to query Go test results using a SQL interface.
+It is designed to help developers understand and analyze tests in their projects,
+especially in large and mature codebases.
+
+Usage:
+  tq [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  query       Execute a single query.
+  shell       Start an interactive SQL shell.
+
+Flags:
+  -h, --help   help for tq
+
+Use "tq [command] --help" for more information about a command.
 ```

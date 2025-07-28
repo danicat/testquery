@@ -1,10 +1,9 @@
-package main
+package collector
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
-	"path/filepath"
 
 	"golang.org/x/tools/cover"
 )
@@ -22,7 +21,7 @@ type CoverageResult struct {
 	FunctionName    string `json:"function_name"`
 }
 
-func collectCoverageResults(pkgDir string) ([]CoverageResult, error) {
+func collectCoverageResults(pkgDirs []string) ([]CoverageResult, error) {
 	profiles, err := cover.ParseProfiles("coverage.out")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse coverage profiles: %w", err)
@@ -30,24 +29,17 @@ func collectCoverageResults(pkgDir string) ([]CoverageResult, error) {
 
 	var results []CoverageResult
 	for _, profile := range profiles {
-		packageName := filepath.Dir(profile.FileName)
-		fileName := filepath.Base(profile.FileName)
 		for _, block := range profile.Blocks {
-			functionName, err := getFunctionName(pkgDir+"/"+fileName, block.StartLine)
-			if err != nil {
-				return nil, fmt.Errorf("failed to retrieve function name: %w", err)
-			}
-
 			results = append(results, CoverageResult{
-				Package:         packageName,
-				File:            fileName,
+				Package:         profile.FileName,
+				File:            profile.FileName,
 				StartLine:       block.StartLine,
 				StartColumn:     block.StartCol,
 				EndLine:         block.EndLine,
 				EndColumn:       block.EndCol,
 				StatementNumber: block.NumStmt,
 				Count:           block.Count,
-				FunctionName:    functionName,
+				FunctionName:    "",
 			})
 		}
 	}
@@ -55,8 +47,8 @@ func collectCoverageResults(pkgDir string) ([]CoverageResult, error) {
 	return results, nil
 }
 
-func populateCoverageResults(ctx context.Context, db *sql.DB, pkgDir string) error {
-	coverageResults, err := collectCoverageResults(pkgDir)
+func PopulateCoverageResults(ctx context.Context, db *sql.DB, pkgDirs []string) error {
+	coverageResults, err := collectCoverageResults(pkgDirs)
 	if err != nil {
 		return fmt.Errorf("failed to collect coverage results: %w", err)
 	}
