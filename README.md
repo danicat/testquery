@@ -1,5 +1,7 @@
 # TestQuery
 
+[![Go](https://github.com/danicat/testquery/actions/workflows/go.yml/badge.svg)](https://github.com/danicat/testquery/actions/workflows/go.yml)
+
 Test Query (tq) is a command line tool to query Go test results with a SQL interface. The idea of using SQL was inspired by a similar tool called OSQuery, which does the same for operating system metrics.
 
 ## Demo
@@ -78,3 +80,16 @@ Flags:
 
 Use "tq [command] --help" for more information about a command.
 ```
+
+### Makefile Targets
+
+The `Makefile` provides several targets to standardize the development and testing workflow:
+
+-   `make build`: Compiles the `tq` binary into the `bin/` directory.
+-   `make test`: Runs the unit tests for the project. This is an alias for `make unit-test`.
+-   `make unit-test`: Runs the fast, isolated unit tests and generates a `unit.cover` profile.
+-   `make integration-test`: Builds a coverage-instrumented binary and runs it against a suite of real-world scenarios, generating an `integration.cover` profile.
+-   `make test-cover`: The primary test target. It runs both `unit-test` and `integration-test`, and then merges their coverage profiles to produce an aggregated total coverage report for the project.
+-   `make setup`: Installs the necessary Go tools for the project, such as `gopls`.
+-   `make clean`: Removes all build and test artifacts.
+

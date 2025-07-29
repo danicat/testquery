@@ -4,7 +4,21 @@ VERSION := 0.1.0
 UNIT_TEST_PACKAGES := ./internal/...
 
 .PHONY: all
-all: build
+all: help
+
+.PHONY: help
+help:
+	@echo "Usage: make <target>"
+	@echo ""
+	@echo "Targets:"
+	@echo "  help                  Show this help message."
+	@echo "  build                 Compile the tq binary into the bin/ directory."
+	@echo "  test                  Run the unit tests for the project."
+	@echo "  unit-test             Run the fast, isolated unit tests."
+	@echo "  integration-test      Run the integration test suite."
+	@echo "  test-cover            Run all tests and produce an aggregated coverage report."
+	@echo "  setup                 Install the necessary Go tools for the project."
+	@echo "  clean                 Remove all build and test artifacts."
 
 .PHONY: build
 build:
