@@ -1,6 +1,10 @@
 # Makefile for testquery
 
 VERSION := 0.1.0
+UNIT_TEST_PACKAGES := ./internal/...
+
+.PHONY: all
+all: build
 
 .PHONY: build
 build:
@@ -11,3 +15,31 @@ build:
 setup:
 	go install golang.org/x/tools/gopls@v0.23.0
 	go install github.com/danicat/godoctor@latest
+
+.PHONY: test
+test: unit-test
+
+.PHONY: unit-test
+unit-test:
+	go test -coverprofile=unit.cover -covermode=count $(UNIT_TEST_PACKAGES)
+
+.PHONY: integration-test
+integration-test:
+	@mkdir -p bin
+	@rm -f testquery.db covmeta.*
+	go build -cover -o bin/tq.cover .
+	GOCOVERDIR=. ./bin/tq.cover query --pkg ./testdata/ "SELECT 1" > /dev/null 2>&1
+	GOCOVERDIR=. ./bin/tq.cover query --pkg . "SELECT 1" > /dev/null 2>&1
+	GOCOVERDIR=. ./bin/tq.cover query --pkg ./... "SELECT 1" > /dev/null 2>&1
+	GOCOVERDIR=. ./bin/tq.cover query --pkg ./testdata/ --force "SELECT 1" > /dev/null 2>&1
+	go tool covdata textfmt -i=. -o=integration.cover
+
+.PHONY: test-cover
+test-cover: unit-test integration-test
+	@echo "mode: count" > coverage.out
+	@tail -q -n +2 unit.cover integration.cover >> coverage.out
+	@go tool cover -func=coverage.out
+
+.PHONY: clean
+clean:
+	@rm -rf bin *.cover *.out covmeta.*
