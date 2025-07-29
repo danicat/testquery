@@ -92,6 +92,7 @@ You are running outside of a sandbox container, directly on the user's system. F
 - After each commit, confirm that it was successful by running `git status`.
 - If a commit fails, never attempt to work around the issues without being asked to do so.
 - Never push changes to a remote repository without being asked explicitly by the user.
+- Prefer simple, robust commands that maintain a clean, linear history. Do not amend or revert commits unless explicitly instructed to do so.
 
 
 # Examples (Illustrating Tone and Workflow)
