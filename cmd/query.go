@@ -60,7 +60,7 @@ func runQuery(q, dbFile, pkg string, force bool) error {
 		}
 	}()
 
-	return query.Execute(db, q)
+	return query.Execute(os.Stdout, db, q)
 }
 
 func runCollect(dbFile, pkgSpecifier string) error {

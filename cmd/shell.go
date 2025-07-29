@@ -58,5 +58,5 @@ func runShell(dbFile, pkg string, force bool) error {
 		}
 	}()
 
-	return shell.Prompt(context.Background(), db)
+	return shell.Prompt(context.Background(), db, os.Stdin, os.Stdout)
 }

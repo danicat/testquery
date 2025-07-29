@@ -4,17 +4,20 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/danicat/testquery/internal/query"
 )
 
-func Prompt(ctx context.Context, db *sql.DB) error {
+func Prompt(ctx context.Context, db *sql.DB, r io.Reader, w io.Writer) error {
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:                 "> ",
 		HistoryFile:            "/tmp/testquery-history",
 		DisableAutoSaveHistory: true,
+		Stdin:                  io.NopCloser(r),
+		Stdout:                 w,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create readline instance: %w", err)
@@ -50,8 +53,8 @@ func Prompt(ctx context.Context, db *sql.DB) error {
 		rl.SetPrompt("> ")
 		rl.SaveHistory(cmd)
 
-		if err = query.Execute(db, cmd); err != nil {
-			fmt.Printf("ERROR: %v\n", err)
+		if err = query.Execute(w, db, cmd); err != nil {
+			fmt.Fprintf(w, "ERROR: %v\n", err)
 		}
 	}
 }

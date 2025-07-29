@@ -2,12 +2,12 @@ package query
 
 import (
 	"database/sql"
-	"os"
+	"io"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-func Execute(db *sql.DB, query string) error {
+func Execute(w io.Writer, db *sql.DB, query string) error {
 	rows, err := db.Query(query)
 	if err != nil {
 		return err
@@ -20,7 +20,7 @@ func Execute(db *sql.DB, query string) error {
 	}
 
 	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
+	t.SetOutputMirror(w)
 
 	var header = make(table.Row, len(columns))
 	for i := range columns {
