@@ -85,7 +85,6 @@ func PopulateTestResults(ctx context.Context, db *sql.DB, pkgDirs []string) ([]T
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect test results: %w", err)
 	}
-	_ = os.WriteFile("test_results_count.txt", []byte(fmt.Sprintf("%d", len(testResults))), 0644)
 
 	for _, test := range testResults {
 

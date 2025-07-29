@@ -56,4 +56,4 @@ test-cover: unit-test integration-test
 
 .PHONY: clean
 clean:
-	@rm -rf bin *.cover *.out covmeta.*
+	@rm -rf bin coverage *.cover *.out covmeta.* covcounters.*
