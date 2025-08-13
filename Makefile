@@ -35,25 +35,27 @@ test: unit-test
 
 .PHONY: unit-test
 unit-test:
-	go test -coverprofile=unit.cover -covermode=count $(UNIT_TEST_PACKAGES)
+	@mkdir -p out
+	go test -coverprofile=./out/unit.cover -covermode=count $(UNIT_TEST_PACKAGES)
 
 .PHONY: integration-test
 integration-test:
 	@mkdir -p bin
+	@mkdir -p out
 	@rm -f testquery.db covmeta.*
 	go build -cover -o bin/tq.cover .
-	GOCOVERDIR=. ./bin/tq.cover query --pkg ./testdata/ "SELECT 1" > /dev/null 2>&1
-	GOCOVERDIR=. ./bin/tq.cover query --pkg . "SELECT 1" > /dev/null 2>&1
-	GOCOVERDIR=. ./bin/tq.cover query --pkg ./... "SELECT 1" > /dev/null 2>&1
-	GOCOVERDIR=. ./bin/tq.cover query --pkg ./testdata/ --force "SELECT 1" > /dev/null 2>&1
-	go tool covdata textfmt -i=. -o=integration.cover
+	GOCOVERDIR=./out ./bin/tq.cover query --pkg ./testdata/ "SELECT * FROM all_tests"
+	GOCOVERDIR=./out ./bin/tq.cover query --pkg . "SELECT * FROM all_tests"
+	GOCOVERDIR=./out ./bin/tq.cover query --pkg ./... "SELECT * FROM all_tests"
+	go tool covdata textfmt -i=./out -o=./out/integration.cover
 
 .PHONY: test-cover
 test-cover: unit-test integration-test
-	@echo "mode: count" > coverage.out
-	@tail -q -n +2 unit.cover integration.cover >> coverage.out
+	@mkdir -p out
+	@echo "mode: count" > ./out/coverage.out
+	@tail -q -n +2 ./out/unit.cover ./out/integration.cover >> ./out/coverage.out
 	@go tool cover -func=coverage.out
 
 .PHONY: clean
 clean:
-	@rm -rf bin coverage *.cover *.out covmeta.* covcounters.*
+	@rm -rf bin out *.db

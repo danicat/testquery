@@ -3,7 +3,6 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/danicat/testquery/internal/database"
@@ -19,41 +18,28 @@ var queryCmd = &cobra.Command{
 	Long:  `Executes a single SQL query against the test database.`,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		force, _ := cmd.Flags().GetBool("force")
+		dbFile, _ := cmd.Flags().GetString("db")
 		pkg, _ := cmd.Flags().GetString("pkg")
-		return runQuery(args[0], dbFile, pkg, force)
+
+		if dbFile != "" && pkg != "" {
+			return fmt.Errorf("cannot use --db and --pkg flags together")
+		}
+
+		if dbFile != "" {
+			return runQuery(args[0], dbFile)
+		}
+
+		return runQueryInMemory(args[0], pkg)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(queryCmd)
-	queryCmd.Flags().StringVar(&dbFile, "db", "testquery.db", "database file name")
-	queryCmd.Flags().Bool("force", false, "force recreation of the database")
-	queryCmd.Flags().String("pkg", "./...", "package specifier")
+	queryCmd.Flags().StringVar(&dbFile, "db", "", "database file name")
+	queryCmd.Flags().String("pkg", "", "package specifier")
 }
 
-func runQuery(q, dbFile, pkg string, force bool) error {
-	if force {
-		log.Println("Forcing database recreation...")
-		if err := os.Remove(dbFile); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("failed to remove existing database: %w", err)
-		}
-	}
-
-	_, err := os.Stat(dbFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Printf("Database %q not found, creating a new one...", dbFile)
-			if err := runCollect(dbFile, pkg); err != nil {
-				return fmt.Errorf("failed to create database: %w", err)
-			}
-		} else {
-			return fmt.Errorf("failed to stat database: %w", err)
-		}
-	} else {
-		log.Printf("Using existing database %q", dbFile)
-	}
-
+func runQuery(q, dbFile string) error {
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
@@ -67,17 +53,25 @@ func runQuery(q, dbFile, pkg string, force bool) error {
 	return query.Execute(os.Stdout, db, q)
 }
 
-func runCollect(dbFile, pkgSpecifier string) error {
+func runQueryInMemory(q, pkg string) error {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		return fmt.Errorf("failed to open in-memory database: %w", err)
+	}
+	defer db.Close()
+
+	if err := runCollect(db, pkg); err != nil {
+		return fmt.Errorf("failed to collect data: %w", err)
+	}
+
+	return query.Execute(os.Stdout, db, q)
+}
+
+func runCollect(db *sql.DB, pkgSpecifier string) error {
 	pkgDirs, err := pkgpattern.ListPackages(pkgSpecifier)
 	if err != nil {
 		return fmt.Errorf("failed to list packages: %w", err)
 	}
-
-	db, err := sql.Open("sqlite3", dbFile)
-	if err != nil {
-		return fmt.Errorf("failed to instantiate sqlite: %w", err)
-	}
-	defer db.Close()
 
 	if err := database.CreateTables(db); err != nil {
 		return fmt.Errorf("failed to create tables: %w", err)

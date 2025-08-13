@@ -7,6 +7,11 @@
         "output" TEXT NULL
 	);
 
+	CREATE TABLE metadata (
+		key TEXT NOT NULL,
+		value TEXT NOT NULL
+	);
+
     CREATE TABLE all_coverage (
 		package TEXT NOT NULL,
 		file TEXT NOT NULL,

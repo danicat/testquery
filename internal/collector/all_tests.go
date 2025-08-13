@@ -33,13 +33,7 @@ func collectTestResults(pkgDirs []string) ([]TestEvent, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
-	if err != nil {
-		if _, ok := err.(*exec.ExitError); !ok {
-			// This is an error running the command, not a test failure.
-			return nil, fmt.Errorf("failed to run go test: %w: %s", err, stderr.String())
-		}
-	}
+	cmd.Run()
 
 	tests, err := parseTestOutput(stdout.Bytes())
 	if err != nil {
