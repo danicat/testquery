@@ -22,38 +22,46 @@ It is currently under development so it doesn't support a lot of information yet
 
 ## Usage
 
-To use `tq`, compile the code with `make build` (or `go build`) and run the binary from the command line.
+`tq` provides two main modes of operation: in-memory and file-based.
 
-`tq` works by implicitly creating a database file (by default, `testquery.db`) if one does not exist. It runs `go test` on the package you specify (or `./...` by default) and collects all the data into the database. If a database file already exists, `tq` will use it.
+- **In-Memory (Default):** For quick, ephemeral queries, `tq` can run tests and build a database entirely in memory. No files are created on disk.
+- **File-Based:** For more persistent analysis, you can first build a database file and then run multiple queries against it.
 
 ### Commands
 
-There are two main commands: `query` and `shell`.
+There are three main commands: `build`, `query`, and `shell`.
+
+#### `tq build`
+
+Builds a persistent SQLite database file from a Go package. This is the primary way to create a database for later analysis.
+
+```sh
+# Build a database from the testdata package
+./bin/tq build --pkg ./testdata/ --output tq.db
+```
 
 #### `tq query`
 
-Executes a single, non-interactive query against the database.
+Executes a single, non-interactive query.
 
 ```sh
-# Run a query against the testdata package
-# This will create testquery.db if it doesn't exist
+# Run an in-memory query against the testdata package
 ./bin/tq query --pkg ./testdata/ "SELECT * FROM failed_tests"
 
-# Force the database to be recreated, even if it exists
-./bin/tq query --pkg ./testdata/ --force "SELECT * FROM failed_tests"
+# Run a query against a pre-built database file
+./bin/tq query --db tq.db "SELECT * FROM failed_tests"
 ```
 
 #### `tq shell`
 
-Starts an interactive SQL shell for querying the database.
+Starts an interactive SQL shell.
 
 ```sh
-# Start a shell for the testdata package
-# This will create testquery.db if it doesn't exist
+# Start an in-memory shell for the testdata package
 ./bin/tq shell --pkg ./testdata/
 
-# Force the database to be recreated
-./bin/tq shell --pkg ./testdata/ --force
+# Start a shell using a pre-built database file
+./bin/tq shell --db tq.db
 ```
 
 ### Command-Line Help
