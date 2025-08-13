@@ -34,8 +34,7 @@ func collectCodeLines(pkgDirs []string) ([]CodeLine, error) {
 
 				data, err := os.ReadFile(path)
 				if err != nil {
-					fmt.Printf("failed to read file %s: %v\n", path, err)
-					return nil
+					return fmt.Errorf("failed to read file %s: %w", path, err)
 				}
 
 				lines := strings.Split(string(data), "\n")
@@ -64,13 +63,18 @@ func PopulateCode(ctx context.Context, db *sql.DB, pkgDirs []string) error {
 		return fmt.Errorf("failed to collect code lines: %w", err)
 	}
 
+	stmt, err := db.PrepareContext(ctx, `INSERT INTO all_code (package, file, line_number, content) VALUES (?, ?, ?, ?);`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
 	for _, result := range allCode {
-		insertSQL := `INSERT INTO all_code (package, file, line_number, content) VALUES (?, ?, ?, ?);`
-		_, err := db.ExecContext(ctx, insertSQL, result.Package, result.File, result.LineNumber, result.Content)
+		_, err := stmt.ExecContext(ctx, result.Package, result.File, result.LineNumber, result.Content)
 		if err != nil {
 			return fmt.Errorf("failed to insert code line for %s/%s:%d: %w", result.Package, result.File, result.LineNumber, err)
 		}
 	}
+
 	return nil
 }
-

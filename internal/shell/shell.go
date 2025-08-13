@@ -34,6 +34,15 @@ func Prompt(ctx context.Context, db *sql.DB, r io.Reader, w io.Writer) error {
 
 		line, err := rl.Readline()
 		if err != nil {
+			if err == readline.ErrInterrupt {
+				if len(cmds) == 0 {
+					return nil
+				}
+				cmds = cmds[:0]
+				continue
+			} else if err == io.EOF {
+				return nil
+			}
 			return fmt.Errorf("failed to read line: %w", err)
 		}
 

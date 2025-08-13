@@ -41,10 +41,14 @@ func runQuery(q, dbFile, pkg string, force bool) error {
 	}
 
 	_, err := os.Stat(dbFile)
-	if os.IsNotExist(err) {
-		log.Printf("Database %q not found, creating a new one...", dbFile)
-		if err := runCollect(dbFile, pkg); err != nil {
-			return fmt.Errorf("failed to create database: %w", err)
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("Database %q not found, creating a new one...", dbFile)
+			if err := runCollect(dbFile, pkg); err != nil {
+				return fmt.Errorf("failed to create database: %w", err)
+			}
+		} else {
+			return fmt.Errorf("failed to stat database: %w", err)
 		}
 	} else {
 		log.Printf("Using existing database %q", dbFile)

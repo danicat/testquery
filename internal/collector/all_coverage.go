@@ -53,9 +53,14 @@ func PopulateCoverageResults(ctx context.Context, db *sql.DB, pkgDirs []string) 
 		return fmt.Errorf("failed to collect coverage results: %w", err)
 	}
 
+	stmt, err := db.PrepareContext(ctx, `INSERT INTO all_coverage (package, file, start_line, start_col, end_line, end_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
 	for _, result := range coverageResults {
-		insertSQL := `INSERT INTO all_coverage (package, file, start_line, start_col, end_line, end_col, stmt_num, count, function_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`
-		_, err := db.ExecContext(ctx, insertSQL, result.Package, result.File, result.StartLine, result.StartColumn, result.EndLine, result.EndColumn, result.StatementNumber, result.Count, result.FunctionName)
+		_, err := stmt.ExecContext(ctx, result.Package, result.File, result.StartLine, result.StartColumn, result.EndLine, result.EndColumn, result.StatementNumber, result.Count, result.FunctionName)
 		if err != nil {
 			return fmt.Errorf("failed to insert coverage results: %w", err)
 		}

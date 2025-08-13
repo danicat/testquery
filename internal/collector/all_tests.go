@@ -7,20 +7,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"time"
 )
 
 // TestResult represents the structure of a test result
 type TestEvent struct {
-	Time         time.Time `json:"time"`
-	Action       string    `json:"action"`
-	Package      string    `json:"package"`
-	Test         string    `json:"test"`
-	Elapsed      *float64  `json:"elapsed,omitempty"`
-	Output       *string   `json:"output,omitempty"`
-	FailedBuild  *string   `json:"FailedBuild,omitempty"`
+	Time    time.Time `json:"time"`
+	Action  string    `json:"action"`
+	Package string    `json:"package"`
+	Test    string    `json:"test"`
+	Elapsed *float64  `json:"elapsed,omitempty"`
+	Output  *string   `json:"output,omitempty"`
 }
 
 // collectTestResults runs `go test -json` and parses the output
@@ -46,13 +44,6 @@ func collectTestResults(pkgDirs []string) ([]TestEvent, error) {
 	tests, err := parseTestOutput(stdout.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse test output: %w. Output: %s", err, stderr.String())
-	}
-
-	// Check for a build failure event, which indicates the package could not be tested.
-	for _, event := range tests {
-		if event.Action == "fail" && event.FailedBuild != nil && *event.FailedBuild != "" {
-			return nil, fmt.Errorf("build failed for package %s", *event.FailedBuild)
-		}
 	}
 
 	var results []TestEvent
@@ -97,4 +88,3 @@ func PopulateTestResults(ctx context.Context, db *sql.DB, pkgDirs []string) ([]T
 
 	return testResults, nil
 }
-
