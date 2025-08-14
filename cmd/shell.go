@@ -58,7 +58,7 @@ func runShellInMemory(pkg string) error {
 	}
 	defer db.Close()
 
-	if err := runCollect(db, pkg); err != nil {
+	if err := RunCollect(db, pkg); err != nil {
 		return fmt.Errorf("failed to collect data: %w", err)
 	}
 

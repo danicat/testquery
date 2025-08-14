@@ -3,6 +3,7 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/danicat/testquery/internal/database"
@@ -29,7 +30,7 @@ var queryCmd = &cobra.Command{
 			return runQuery(args[0], dbFile)
 		}
 
-		return runQueryInMemory(args[0], pkg)
+		return RunQueryInMemory(os.Stdout, args[0], pkg)
 	},
 }
 
@@ -53,21 +54,21 @@ func runQuery(q, dbFile string) error {
 	return query.Execute(os.Stdout, db, q)
 }
 
-func runQueryInMemory(q, pkg string) error {
+func RunQueryInMemory(w io.Writer, q, pkg string) error {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		return fmt.Errorf("failed to open in-memory database: %w", err)
 	}
 	defer db.Close()
 
-	if err := runCollect(db, pkg); err != nil {
+	if err := RunCollect(db, pkg); err != nil {
 		return fmt.Errorf("failed to collect data: %w", err)
 	}
 
-	return query.Execute(os.Stdout, db, q)
+	return query.Execute(w, db, q)
 }
 
-func runCollect(db *sql.DB, pkgSpecifier string) error {
+func RunCollect(db *sql.DB, pkgSpecifier string) error {
 	pkgDirs, err := pkgpattern.ListPackages(pkgSpecifier)
 	if err != nil {
 		return fmt.Errorf("failed to list packages: %w", err)

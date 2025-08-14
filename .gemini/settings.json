@@ -6,6 +6,10 @@
         },
         "godoctor": {
             "command": "godoctor"
+        },
+        "testquery": {
+            "command": "./bin/tq",
+            "args": ["mcp"]
         }
     }
 }

@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -15,11 +16,30 @@ func TestCollectCoverageResults(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	coverageFile := filepath.Join(tmpDir, "coverage.out")
-	coverageData := `mode: set
-github.com/danicat/testquery/testdata/div.go:7.52,10.6 2 1
-github.com/danicat/testquery/testdata/div.go:12.2,12.31 1 1
+	// Create a dummy div.go file
+	divGo := `package testdata
+
+import "fmt"
+
+// Div divides two integers.
+// It returns an error if the divisor is zero.
+func Div(a, b int) (int, error) {
+	if b == 0 {
+		return 0, fmt.Errorf("division by zero")
+	}
+	return a / b, nil
+}
 `
+	divGoPath := filepath.Join(tmpDir, "div.go")
+	if err := os.WriteFile(divGoPath, []byte(divGo), 0644); err != nil {
+		t.Fatalf("Failed to write div.go: %v", err)
+	}
+
+	coverageFile := filepath.Join(tmpDir, "coverage.out")
+	coverageData := fmt.Sprintf(`mode: set
+%s:7.52,10.6 2 1
+%s:12.2,12.31 1 1
+`, divGoPath, divGoPath)
 	if err := os.WriteFile(coverageFile, []byte(coverageData), 0644); err != nil {
 		t.Fatalf("Failed to write coverage.out: %v", err)
 	}
@@ -44,26 +64,26 @@ github.com/danicat/testquery/testdata/div.go:12.2,12.31 1 1
 	// Define the expected result
 	expected := []CoverageResult{
 		{
-			Package:         "github.com/danicat/testquery/testdata/div.go",
-			File:            "github.com/danicat/testquery/testdata/div.go",
+			Package:         divGoPath,
+			File:            divGoPath,
 			StartLine:       7,
 			StartColumn:     52,
 			EndLine:         10,
 			EndColumn:       6,
 			StatementNumber: 2,
 			Count:           1,
-			FunctionName:    "",
+			FunctionName:    "Div",
 		},
 		{
-			Package:         "github.com/danicat/testquery/testdata/div.go",
-			File:            "github.com/danicat/testquery/testdata/div.go",
+			Package:         divGoPath,
+			File:            divGoPath,
 			StartLine:       12,
 			StartColumn:     2,
 			EndLine:         12,
 			EndColumn:       31,
 			StatementNumber: 1,
 			Count:           1,
-			FunctionName:    "",
+			FunctionName:    "Div",
 		},
 	}
 
