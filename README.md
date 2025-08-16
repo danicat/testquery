@@ -1,5 +1,7 @@
 # TestQuery
 
+> This is not an officially supported Google product.
+
 [![Go](https://github.com/danicat/testquery/actions/workflows/go.yml/badge.svg)](https://github.com/danicat/testquery/actions/workflows/go.yml)
 
 Test Query (tq) is a command line tool to query Go test results with a SQL interface. The idea of using SQL was inspired by a similar tool called OSQuery, which does the same for operating system metrics.
