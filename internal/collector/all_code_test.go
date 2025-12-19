@@ -67,3 +67,33 @@ func TestCollectCodeLines(t *testing.T) {
 		t.Errorf("collectCodeLines() got = %v, want %v", codeLines, expected)
 	}
 }
+
+func TestCollectCodeLines_ReadFileError(t *testing.T) {
+	// Create a temporary directory for our test files
+	tmpDir, err := os.MkdirTemp("", "test-collect-code-lines-read-error-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create a dummy Go file
+	fileContent := "package main"
+	filePath := filepath.Join(tmpDir, "unreadable.go")
+	if err := os.WriteFile(filePath, []byte(fileContent), 0644); err != nil {
+		t.Fatalf("Failed to write file: %v", err)
+	}
+
+	// Make the file unreadable
+	if err := os.Chmod(filePath, 0000); err != nil {
+		t.Fatalf("Failed to make file unreadable: %v", err)
+	}
+	defer os.Chmod(filePath, 0644) // Clean up
+
+	// Call the function we are testing
+	_, err = collectCodeLines([]string{tmpDir})
+
+	// Check that we got an error
+	if err == nil {
+		t.Error("collectCodeLines() did not return an error, but one was expected")
+	}
+}

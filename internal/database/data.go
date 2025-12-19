@@ -18,6 +18,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/danicat/testquery/internal/collector"
 	_ "embed"
@@ -27,8 +28,25 @@ import (
 var DDL string
 
 func CreateTables(db *sql.DB) error {
-	_, err := db.Exec(DDL)
-	return err
+	return CreateTablesFromDDL(db, DDL)
+}
+
+func CreateTablesFromDDL(db *sql.DB, ddl string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	statements := strings.Split(ddl, ";")
+	for _, stmt := range statements {
+		stmt = strings.TrimSpace(stmt)
+		if stmt != "" {
+			if _, err := tx.Exec(stmt); err != nil {
+				tx.Rollback()
+				return fmt.Errorf("failed to execute statement %q: %w", stmt, err)
+			}
+		}
+	}
+	return tx.Commit()
 }
 
 func PopulateTables(db *sql.DB, pkgDirs []string) error {
