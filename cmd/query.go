@@ -14,33 +14,41 @@ import (
 )
 
 var queryCmd = &cobra.Command{
-	Use:   "query [query]",
-	Short: "Execute a single query.",
-	Long:  `Executes a single SQL query against the test database.`,
-	Args:  cobra.ExactArgs(1),
+	Use:   "query [sql]",
+	Short: "Execute a single SQL query.",
+	Long: `Executes a SQL query against test and coverage data.
+
+You can query an existing database (Offline Mode):
+  tq query "SELECT * FROM all_tests" --db testquery.db
+
+Or run tests and query the results immediately (Live Mode):
+  tq query "SELECT * FROM all_tests" --pkg ./...`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dbFile, _ := cmd.Flags().GetString("db")
 		pkg, _ := cmd.Flags().GetString("pkg")
+		format, _ := cmd.Flags().GetString("format")
 
-		if dbFile != "" && pkg != "" {
-			return fmt.Errorf("cannot use --db and --pkg flags together")
+		if dbFile != "" && cmd.Flags().Changed("pkg") {
+			return fmt.Errorf("cannot use --db (offline mode) and --pkg (live mode) together")
 		}
 
 		if dbFile != "" {
-			return runQuery(args[0], dbFile)
+			return runQuery(args[0], dbFile, format)
 		}
 
-		return RunQueryInMemory(os.Stdout, args[0], pkg)
+		return RunQueryInMemory(os.Stdout, args[0], pkg, format)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(queryCmd)
-	queryCmd.Flags().StringVar(&dbFile, "db", "", "database file name")
-	queryCmd.Flags().String("pkg", "", "package specifier")
+	queryCmd.Flags().StringVar(&dbFile, "db", "", "Path to a persistent SQLite database (Offline Mode)")
+	queryCmd.Flags().String("pkg", "./...", "Go package pattern to analyze immediately (Live Mode)")
+	queryCmd.Flags().String("format", "table", "Output format: 'table' or 'json'")
 }
 
-func runQuery(q, dbFile string) error {
+func runQuery(q, dbFile, format string) error {
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
@@ -51,10 +59,10 @@ func runQuery(q, dbFile string) error {
 		}
 	}()
 
-	return query.Execute(os.Stdout, db, q)
+	return query.Execute(os.Stdout, db, q, format)
 }
 
-func RunQueryInMemory(w io.Writer, q, pkg string) error {
+func RunQueryInMemory(w io.Writer, q, pkg, format string) error {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		return fmt.Errorf("failed to open in-memory database: %w", err)
@@ -65,7 +73,7 @@ func RunQueryInMemory(w io.Writer, q, pkg string) error {
 		return fmt.Errorf("failed to collect data: %w", err)
 	}
 
-	return query.Execute(w, db, q)
+	return query.Execute(w, db, q, format)
 }
 
 func RunCollect(db *sql.DB, pkgSpecifier string) error {

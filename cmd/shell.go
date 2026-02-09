@@ -14,13 +14,14 @@ import (
 var shellCmd = &cobra.Command{
 	Use:   "shell",
 	Short: "Start an interactive SQL shell.",
-	Long:  `Starts an interactive SQL shell to query the test database.`,
+	Long: `Starts an interactive SQL shell to query test and coverage results.
+Supports the same Live and Offline modes as the 'query' command.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dbFile, _ := cmd.Flags().GetString("db")
 		pkg, _ := cmd.Flags().GetString("pkg")
 
-		if dbFile != "" && pkg != "" {
-			return fmt.Errorf("cannot use --db and --pkg flags together")
+		if dbFile != "" && cmd.Flags().Changed("pkg") {
+			return fmt.Errorf("cannot use --db (offline mode) and --pkg (live mode) together")
 		}
 
 		if dbFile != "" {
@@ -33,8 +34,8 @@ var shellCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(shellCmd)
-	shellCmd.Flags().StringVar(&dbFile, "db", "", "database file name")
-	shellCmd.Flags().String("pkg", "", "package specifier")
+	shellCmd.Flags().StringVar(&dbFile, "db", "", "Path to a persistent SQLite database (Offline Mode)")
+	shellCmd.Flags().String("pkg", "./...", "Go package pattern to analyze immediately (Live Mode)")
 }
 
 func runShell(dbFile string) error {

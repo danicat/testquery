@@ -15,9 +15,10 @@ import (
 
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
-	Short: "Run the MCP server.",
-	Long:  `Run the MCP server to expose testquery as a tool.`,
+	Short: "Start an MCP server.",
+	Long:  `Exposes TestQuery (tq) as a Model Context Protocol (MCP) server, allowing AI agents to query your test and coverage data.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+
 		s := mcp.NewServer(&mcp.Implementation{}, nil)
 		mcp.AddTool(s, &mcp.Tool{
 			Name:        "query",
@@ -36,8 +37,10 @@ var mcpCmd = &cobra.Command{
 			}
 
 			var b bytes.Buffer
-			if err := RunQueryInMemory(&b, q, "./..."); err != nil {
+			// Default to table format for now to maintain existing behavior
+			if err := RunQueryInMemory(&b, q, "./...", "table"); err != nil {
 				return &mcp.CallToolResultFor[any]{
+
 					Content: []mcp.Content{
 						&mcp.TextContent{
 							Text: err.Error(),

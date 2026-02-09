@@ -62,8 +62,9 @@ func Prompt(ctx context.Context, db *sql.DB, r io.Reader, w io.Writer) error {
 		rl.SetPrompt("> ")
 		rl.SaveHistory(cmd)
 
-		if err = query.Execute(w, db, cmd); err != nil {
+		if err = query.Execute(w, db, cmd, "table"); err != nil {
 			fmt.Fprintf(w, "ERROR: %v\n", err)
 		}
+
 	}
 }

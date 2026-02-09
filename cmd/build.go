@@ -12,8 +12,9 @@ import (
 
 var buildCmd = &cobra.Command{
 	Use:   "build",
-	Short: "Build the test database from a package.",
-	Long:  `Builds the test database by collecting test and coverage data from a specified Go package.`,
+	Short: "Build a persistent test database.",
+	Long: `Executes Go tests with coverage and stores all results in a persistent SQLite database.
+This database can be queried later using the --db flag in 'query', 'shell', or 'explain' commands.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pkg, _ := cmd.Flags().GetString("pkg")
 		output, _ := cmd.Flags().GetString("output")
@@ -23,8 +24,8 @@ var buildCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(buildCmd)
-	buildCmd.Flags().String("pkg", "./...", "Go package specifier")
-	buildCmd.Flags().String("output", "testquery.db", "Output database file")
+	buildCmd.Flags().String("pkg", "./...", "Go package pattern to test and analyze")
+	buildCmd.Flags().String("output", "testquery.db", "Path to the output SQLite database file")
 }
 
 func runBuild(dbFile, pkgSpecifier string) error {
