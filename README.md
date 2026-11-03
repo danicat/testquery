@@ -38,11 +38,14 @@ Builds a persistent SQLite database file from a Go package. This is the primary 
 ```sh
 # Build a database from the testdata package
 ./bin/tq build --pkg ./testdata/ --output tq.db
+
+# Overwrite an existing database file
+./bin/tq build --pkg ./testdata/ --output tq.db --force
 ```
 
 #### `tq query`
 
-Executes a single, non-interactive query.
+Executes a single, non-interactive query. Cells longer than 80 characters are truncated in table mode unless `--no-truncate` or `--full` is set.
 
 ```sh
 # Run an in-memory query against the testdata package
@@ -50,6 +53,9 @@ Executes a single, non-interactive query.
 
 # Run a query against a pre-built database file
 ./bin/tq query --db tq.db "SELECT * FROM failed_tests"
+
+# Show full cell contents without truncation
+./bin/tq query --db tq.db --full "SELECT * FROM all_tests"
 ```
 
 #### `tq shell`
@@ -100,4 +106,10 @@ The `Makefile` provides several targets to standardize the development and testi
 -   `make test-cover`: The primary test target. It runs both `unit-test` and `integration-test`, and then merges their coverage profiles to produce an aggregated total coverage report for the project.
 -   `make setup`: Installs the necessary Go tools for the project, such as `gopls`.
 -   `make clean`: Removes all build and test artifacts.
+
+---
+
+## Disclaimer
+
+This is not an officially supported Google product.
 

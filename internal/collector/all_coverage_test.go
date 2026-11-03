@@ -1,3 +1,23 @@
+// Copyright (c) 2026 Google LLC
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package collector
 
 import (
@@ -9,14 +29,17 @@ import (
 )
 
 func TestCollectCoverageResults(t *testing.T) {
-	// Create a temporary directory and a dummy coverage.out file
 	tmpDir, err := os.MkdirTemp("", "test-collect-coverage-")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Create a dummy div.go file
+	goMod := "module example.com/testmod\n\ngo 1.24\n"
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatalf("Failed to write go.mod: %v", err)
+	}
+
 	divGo := `package testdata
 
 import "fmt"
@@ -39,13 +62,11 @@ func Div(a, b int) (int, error) {
 	coverageData := fmt.Sprintf(`mode: set
 %s:7.52,10.6 2 1
 %s:12.2,12.31 1 1
-`, divGoPath, divGoPath)
+`, "example.com/testmod/div.go", "example.com/testmod/div.go")
 	if err := os.WriteFile(coverageFile, []byte(coverageData), 0644); err != nil {
 		t.Fatalf("Failed to write coverage.out: %v", err)
 	}
 
-	// Temporarily change the working directory to the temp dir
-	// so that cover.ParseProfiles can find the file.
 	oldWd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get current working directory: %v", err)
@@ -53,19 +74,17 @@ func Div(a, b int) (int, error) {
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("Failed to change directory: %v", err)
 	}
-	defer os.Chdir(oldWd)
+	defer func() { _ = os.Chdir(oldWd) }()
 
-	// Call the function we are testing
 	coverageResults, err := collectCoverageResults([]string{"./..."})
 	if err != nil {
 		t.Fatalf("collectCoverageResults failed: %v", err)
 	}
 
-	// Define the expected result
 	expected := []CoverageResult{
 		{
-			Package:         divGoPath,
-			File:            divGoPath,
+			Package:         "example.com/testmod",
+			File:            "div.go",
 			StartLine:       7,
 			StartColumn:     52,
 			EndLine:         10,
@@ -75,8 +94,8 @@ func Div(a, b int) (int, error) {
 			FunctionName:    "Div",
 		},
 		{
-			Package:         divGoPath,
-			File:            divGoPath,
+			Package:         "example.com/testmod",
+			File:            "div.go",
 			StartLine:       12,
 			StartColumn:     2,
 			EndLine:         12,
@@ -87,8 +106,7 @@ func Div(a, b int) (int, error) {
 		},
 	}
 
-	// Check if the result matches the expectation
 	if !reflect.DeepEqual(coverageResults, expected) {
-		t.Errorf("collectCoverageResults() got = %v, want %v", coverageResults, expected)
+		t.Errorf("collectCoverageResults() got = %+v, want %+v", coverageResults, expected)
 	}
 }

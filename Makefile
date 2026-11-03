@@ -1,6 +1,6 @@
 # Makefile for testquery
 
-VERSION := 0.2.0
+VERSION := 0.3.0
 UNIT_TEST_PACKAGES := ./internal/...
 
 .PHONY: all

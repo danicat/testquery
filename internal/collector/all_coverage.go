@@ -1,3 +1,23 @@
+// Copyright (c) 2026 Google LLC
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package collector
 
 import (
@@ -7,15 +27,12 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"path/filepath"
-	"strings"
 	"os"
 
 	"golang.org/x/tools/cover"
-	"golang.org/x/mod/modfile"
 )
 
-// CoverageResult represents the structure of a coverage result
+// CoverageResult represents the structure of a coverage result.
 type CoverageResult struct {
 	Package         string `json:"package"`
 	File            string `json:"file"`
@@ -29,6 +46,15 @@ type CoverageResult struct {
 }
 
 func collectCoverageResults(pkgDirs []string) ([]CoverageResult, error) {
+	if _, err := os.Stat("coverage.out"); os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	mc, err := resolveModuleContext(pkgDirs)
+	if err != nil {
+		return nil, err
+	}
+
 	profiles, err := cover.ParseProfiles("coverage.out")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse coverage profiles: %w", err)
@@ -36,15 +62,17 @@ func collectCoverageResults(pkgDirs []string) ([]CoverageResult, error) {
 
 	var results []CoverageResult
 	for _, profile := range profiles {
-		functionFinder, err := newFunctionFinder(profile.FileName)
+		functionFinder, err := newFunctionFinderWithContext(profile.FileName, mc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create function finder: %w", err)
 		}
 
+		normFile, normPkg := mc.normalizeFileAndPackage(profile.FileName, "")
+
 		for _, block := range profile.Blocks {
 			results = append(results, CoverageResult{
-				Package:         profile.FileName,
-				File:            profile.FileName,
+				Package:         normPkg,
+				File:            normFile,
 				StartLine:       block.StartLine,
 				StartColumn:     block.StartCol,
 				EndLine:         block.EndLine,
@@ -60,6 +88,10 @@ func collectCoverageResults(pkgDirs []string) ([]CoverageResult, error) {
 }
 
 func PopulateCoverageResults(ctx context.Context, db *sql.DB, pkgDirs []string) error {
+	defer func() {
+		_ = os.Remove("coverage.out")
+	}()
+
 	coverageResults, err := collectCoverageResults(pkgDirs)
 	if err != nil {
 		return fmt.Errorf("failed to collect coverage results: %w", err)
@@ -69,7 +101,9 @@ func PopulateCoverageResults(ctx context.Context, db *sql.DB, pkgDirs []string) 
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 
 	for _, result := range coverageResults {
 		_, err := stmt.ExecContext(ctx, result.Package, result.File, result.StartLine, result.StartColumn, result.EndLine, result.EndColumn, result.StatementNumber, result.Count, result.FunctionName)
@@ -83,81 +117,22 @@ func PopulateCoverageResults(ctx context.Context, db *sql.DB, pkgDirs []string) 
 type functionFinder struct {
 	fset         *token.FileSet
 	file         *ast.File
-	functions    []*ast.FuncDecl
 	lineMap      map[int]string
-	packagePath  string
 	fullFilePath string
 }
 
-func newFunctionFinder(fileName string) (*functionFinder, error) {
-	var fullFilePath string
-	if filepath.IsAbs(fileName) {
-		fullFilePath = fileName
-	} else {
-		// In some cases, the file name in the coverage profile is relative to the package directory.
-		// We need to find the absolute path to the file.
-		// A simple way to find the project root is to look for the go.mod file
-		var projectRoot string
-		dir, err := os.Getwd()
+func newFunctionFinderWithContext(fileName string, mc *moduleContext) (*functionFinder, error) {
+	if mc == nil {
+		var err error
+		mc, err = resolveModuleContext(nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get current directory: %w", err)
+			return nil, err
 		}
-		for {
-			if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-				projectRoot = dir
-				break
-			}
-			if dir == filepath.Dir(dir) { // root of the filesystem
-				break
-			}
-			dir = filepath.Dir(dir)
-		}
+	}
 
-		if projectRoot == "" {
-			return nil, fmt.Errorf("failed to find project root")
-		}
-
-		// The fileName is often in the form of `package/path/to/file.go`
-		// We need to join this with the project root to get the full path.
-		// For example, if projectRoot is `/path/to/project` and fileName is `cmd/root.go`,
-		// the full path should be `/path/to/project/cmd/root.go`.
-		// However, the fileName can also be just `file.go` if the package is the root of the project.
-		// So we need to handle both cases.
-		// Let's try to join the project root with the fileName and see if the file exists.
-		// If it does, we have our full path.
-		// If not, we'll have to search for the file.
-		goModFile, err := os.ReadFile(filepath.Join(projectRoot, "go.mod"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to read go.mod file: %w", err)
-		}
-		modulePath := modfile.ModulePath(goModFile)
-
-		fullFilePath = filepath.Join(projectRoot, strings.TrimPrefix(fileName, modulePath+"/"))
-		if _, err := os.Stat(fullFilePath); err != nil {
-			// The file does not exist at the joined path.
-			// Let's search for the file in the project root.
-			var found bool
-			err := filepath.Walk(projectRoot, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if strings.HasSuffix(path, fileName) {
-					fullFilePath, err = filepath.Abs(path)
-					if err != nil {
-						return err
-					}
-					found = true
-					return filepath.SkipDir
-				}
-				return nil
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to find file %s: %w", fileName, err)
-			}
-			if !found {
-				return nil, fmt.Errorf("failed to find file %s in %s", fileName, projectRoot)
-			}
-		}
+	fullFilePath, err := mc.resolveFileOnDisk(fileName)
+	if err != nil {
+		return nil, err
 	}
 
 	fset := token.NewFileSet()
@@ -170,7 +145,6 @@ func newFunctionFinder(fileName string) (*functionFinder, error) {
 		fset:         fset,
 		file:         file,
 		lineMap:      make(map[int]string),
-		packagePath:  "",
 		fullFilePath: fullFilePath,
 	}, nil
 }
@@ -187,14 +161,13 @@ func (f *functionFinder) findFunction(line int) string {
 			endLine := f.fset.Position(fn.End()).Line
 			if line >= startLine && line <= endLine {
 				funcName = fn.Name.Name
-				// Map all lines within the function to the function name for faster lookups.
 				for i := startLine; i <= endLine; i++ {
 					f.lineMap[i] = funcName
 				}
-				return false // Stop searching
+				return false
 			}
 		}
-		return true // Continue searching
+		return true
 	})
 
 	return funcName
